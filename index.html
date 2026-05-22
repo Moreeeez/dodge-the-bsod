@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dodge the BSOD</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div class="brand">
+        <span class="logo">XP</span>
+        <div>
+          <h1>Dodge the BSOD</h1>
+          <p id="statusText">System idle. Disaster pending.</p>
+        </div>
+      </div>
+
+      <section class="hud" aria-label="Game stats">
+        <div class="hud-card"><span>Score</span><strong id="scoreValue">0</strong></div>
+        <div class="hud-card"><span>High</span><strong id="highScoreValue">0</strong></div>
+        <div class="hud-card"><span>Health</span><strong id="healthValue">100</strong></div>
+        <div class="hud-card"><span>Combo</span><strong id="comboValue">x1</strong></div>
+        <div class="hud-card"><span>Shield</span><strong id="shieldValue">Off</strong></div>
+        <div class="hud-card"><span>Power</span><strong id="powerValue">None</strong></div>
+        <button id="pauseButton" class="square-button" type="button" aria-label="Pause game" title="Pause">II</button>
+      </section>
+    </header>
+
+    <section id="gameFrame" class="game-frame">
+      <canvas id="gameCanvas" width="900" height="560" aria-label="Dodge the BSOD game canvas"></canvas>
+      <div id="warningFlash" class="warning-flash" hidden>CRITICAL BSOD INCOMING</div>
+      <div id="eventBadge" class="event-badge">READY</div>
+      <div id="bossBar" class="boss-bar" hidden>
+        <span>Critical System Failure</span>
+        <i id="bossHealth"></i>
+      </div>
+
+      <div id="startScreen" class="overlay">
+        <div class="window-panel">
+          <div class="window-title">
+            <span>DodgeTheBSOD.exe</span>
+            <b>_</b><b>[]</b><b>X</b>
+          </div>
+          <div class="window-body">
+            <h2>Dodge the BSOD</h2>
+            <p>Enter a display name, pick a boot mode, then dodge crashes long enough to embarrass Windows.</p>
+            <label class="name-field">
+              <span>Display name</span>
+              <input id="playerNameInput" type="text" maxlength="16" autocomplete="nickname" placeholder="Player">
+            </label>
+            <p id="nameError" class="form-error" hidden>Name required.</p>
+            <fieldset class="difficulty-picker">
+              <legend>Difficulty</legend>
+              <label><input type="radio" name="difficulty" value="chill"> Chill</label>
+              <label><input type="radio" name="difficulty" value="normal" checked> Normal</label>
+              <label><input type="radio" name="difficulty" value="nightmare"> Nightmare</label>
+            </fieldset>
+            <div class="help-grid">
+              <span>Move</span><strong>WASD / Arrow Keys</strong>
+              <span>Pause</span><strong>P</strong>
+              <span>Powerups</span><strong>Collect green utilities</strong>
+              <span>Goal</span><strong>Survive the operating system</strong>
+            </div>
+            <button id="startButton" class="primary-button" type="button">Start Program</button>
+            <section class="leaderboard-panel" aria-label="Leaderboard">
+              <div class="leaderboard-heading">
+                <strong>Top Scores</strong>
+                <button id="refreshScoresButton" class="mini-button" type="button">Refresh</button>
+              </div>
+              <ol id="leaderboardList" class="leaderboard-list">
+                <li>Loading leaderboard...</li>
+              </ol>
+            </section>
+          </div>
+        </div>
+      </div>
+
+      <div id="pauseScreen" class="overlay" hidden>
+        <div class="window-panel compact">
+          <div class="window-title">
+            <span>Task Manager</span>
+            <b>_</b><b>[]</b><b>X</b>
+          </div>
+          <div class="window-body">
+            <h2>Paused</h2>
+            <p>CPU usage: emotionally high.</p>
+            <button id="resumeButton" class="primary-button" type="button">Resume</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="gameOverScreen" class="overlay" hidden>
+        <div class="window-panel">
+          <div class="window-title danger">
+            <span>System Failure</span>
+            <b>_</b><b>[]</b><b>X</b>
+          </div>
+          <div class="window-body">
+            <h2>Game Over</h2>
+            <p id="finalMessage">Windows has recovered from an unexpected player.</p>
+            <div class="results">
+              <span>Final Score</span><strong id="finalScore">0</strong>
+              <span>Best Score</span><strong id="bestScore">0</strong>
+              <span>Time Survived</span><strong id="finalTime">0s</strong>
+              <span>Max Combo</span><strong id="finalCombo">x1</strong>
+              <span>Errors Dodged</span><strong id="finalDodged">0</strong>
+              <span>Powerups Used</span><strong id="finalPowerups">0</strong>
+              <span>Bosses Defeated</span><strong id="finalBosses">0</strong>
+              <span>Difficulty</span><strong id="finalDifficulty">Normal Boot</strong>
+            </div>
+            <p id="submitStatus" class="submit-status">Submitting score...</p>
+            <section class="leaderboard-panel" aria-label="Game over leaderboard">
+              <div class="leaderboard-heading">
+                <strong>Leaderboard</strong>
+              </div>
+              <ol id="gameOverLeaderboardList" class="leaderboard-list">
+                <li>Loading leaderboard...</li>
+              </ol>
+            </section>
+            <button id="restartButton" class="primary-button" type="button">Restart Windows</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
