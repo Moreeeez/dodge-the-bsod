@@ -121,31 +121,29 @@ function cleanScores(scores, mode) {
   return sortScores([...bestByPlayer.values()]);
 }
 
+function parseScoreList(value) {
+  if (!value) return [];
+  if (Array.isArray(value)) return value;
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+async function readLegacyScores(mode) {
+  const legacyStored = await kvRequest(["GET", LEGACY_KEY]);
+  return parseScoreList(legacyStored)
+    .filter(entry => normalizeMode(entry.mode || entry.difficulty) === mode);
+}
+
 async function readScores(mode) {
   const stored = await kvRequest(["GET", `${KEY_PREFIX}${mode}`]);
   if (stored === null) return memoryScores[mode];
-  const scores = [];
-
-  if (stored) {
-    try {
-      scores.push(...JSON.parse(stored));
-    } catch {
-      // Ignore malformed mode data and still try legacy data.
-    }
-  }
-
-  const legacyStored = await kvRequest(["GET", LEGACY_KEY]);
-  if (legacyStored) {
-    try {
-      const legacyScores = JSON.parse(legacyStored)
-        .filter(entry => normalizeMode(entry.mode || entry.difficulty) === mode);
-      scores.push(...legacyScores);
-    } catch {
-      // Legacy data should never break the current leaderboard.
-    }
-  }
-
-  return cleanScores(scores, mode);
+  const scores = cleanScores([...parseScoreList(stored), ...await readLegacyScores(mode)], mode);
+  if (scores.length) await writeScores(mode, scores);
+  return scores;
 }
 
 async function writeScores(mode, scores) {
