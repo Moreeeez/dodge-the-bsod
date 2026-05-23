@@ -51,7 +51,7 @@ The frontend calls `/api/scores`, so it works on Vercel without hardcoded hostna
 
 ## API
 
-- `GET /api/scores` or `GET /api/scores?mode=all` returns the top 10 combined scores.
+- `GET /api/scores` returns the top 10 Normal scores by default.
 - `GET /api/scores?mode=chill` returns the top 10 Chill scores.
 - `GET /api/scores?mode=normal` returns the top 10 Normal scores.
 - `GET /api/scores?mode=nightmare` returns the top 10 Nightmare scores.

@@ -39,15 +39,9 @@ function normalizeMode(value) {
   return match ? match[0] : "";
 }
 
-function normalizeQueryMode(value) {
-  const key = String(value || "").trim().toLocaleLowerCase("en-US");
-  if (key === "all") return "all";
-  return normalizeMode(key);
-}
-
-function getRequestMode(req, fallback = "all") {
+function getRequestMode(req, fallback = "normal") {
   const url = new URL(req.url || "/", "http://localhost");
-  return normalizeQueryMode(url.searchParams.get("mode") || url.searchParams.get("difficulty")) || fallback;
+  return normalizeMode(url.searchParams.get("mode") || url.searchParams.get("difficulty")) || fallback;
 }
 
 function validateScore(body) {
@@ -155,28 +149,23 @@ async function readAllLegacyScores() {
     .filter(Boolean);
 }
 
+async function restoreLegacyScoresToModeKeys() {
+  const legacyScores = await readAllLegacyScores();
+  if (!legacyScores.length) return;
+
+  for (const mode of MODE_KEYS) {
+    const existing = parseScoreList(await kvRequest(["GET", `${KEY_PREFIX}${mode}`]));
+    const legacyForMode = legacyScores.filter(entry => entry.mode === mode);
+    if (legacyForMode.length) await writeScores(mode, [...existing, ...legacyForMode]);
+  }
+}
+
 async function readScores(mode) {
   const stored = await kvRequest(["GET", `${KEY_PREFIX}${mode}`]);
   if (stored === null) return memoryScores[mode];
   const scores = cleanScores([...parseScoreList(stored), ...await readLegacyScores(mode)], mode);
   if (scores.length) await writeScores(mode, scores);
   return scores;
-}
-
-async function readAllScores() {
-  const groups = await Promise.all(MODE_KEYS.map(mode => readScores(mode)));
-  const legacy = await readAllLegacyScores();
-  const combined = [...groups.flat(), ...legacy].map(entry => {
-    const mode = normalizeMode(entry.mode || entry.difficulty);
-    return mode ? { ...entry, mode, difficulty: MODES[mode] } : null;
-  }).filter(Boolean);
-  const bestByPlayerAndMode = new Map();
-  for (const entry of combined) {
-    const key = `${entry.mode}:${nameKey(entry.playerKey || entry.name)}`;
-    const current = bestByPlayerAndMode.get(key);
-    if (!current || Number(entry.score) > Number(current.score)) bestByPlayerAndMode.set(key, entry);
-  }
-  return sortScores([...bestByPlayerAndMode.values()]);
 }
 
 async function writeScores(mode, scores) {
@@ -212,11 +201,13 @@ export default async function handler(req, res) {
   try {
     if (req.method === "GET") {
       const mode = getRequestMode(req);
-      const scores = mode === "all" ? await readAllScores() : await readScores(mode);
-      return json(res, 200, { mode, difficulty: mode === "all" ? "All" : MODES[mode], scores });
+      await restoreLegacyScoresToModeKeys();
+      const scores = await readScores(mode);
+      return json(res, 200, { mode, difficulty: MODES[mode], scores });
     }
 
     if (req.method === "POST") {
+      await restoreLegacyScoresToModeKeys();
       const validation = validateScore(req.body || {});
       if (validation.error) return json(res, 400, { error: validation.error });
 
