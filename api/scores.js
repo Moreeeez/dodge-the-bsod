@@ -1,4 +1,5 @@
 const KEY_PREFIX = "bsod:scores:";
+const LEGACY_KEY = "dodge-bsod:scores";
 const MODES = {
   chill: "Chill",
   normal: "Normal",
@@ -32,7 +33,9 @@ function nameKey(value) {
 
 function normalizeMode(value) {
   const key = String(value || "").trim().toLocaleLowerCase("en-US");
-  return MODES[key] ? key : "";
+  if (MODES[key]) return key;
+  const match = Object.entries(MODES).find(([, label]) => label.toLocaleLowerCase("en-US") === key);
+  return match ? match[0] : "";
 }
 
 function getRequestMode(req, fallback = "normal") {
@@ -121,12 +124,28 @@ function cleanScores(scores, mode) {
 async function readScores(mode) {
   const stored = await kvRequest(["GET", `${KEY_PREFIX}${mode}`]);
   if (stored === null) return memoryScores[mode];
-  if (!stored) return [];
-  try {
-    return cleanScores(JSON.parse(stored), mode);
-  } catch {
-    return [];
+  const scores = [];
+
+  if (stored) {
+    try {
+      scores.push(...JSON.parse(stored));
+    } catch {
+      // Ignore malformed mode data and still try legacy data.
+    }
   }
+
+  const legacyStored = await kvRequest(["GET", LEGACY_KEY]);
+  if (legacyStored) {
+    try {
+      const legacyScores = JSON.parse(legacyStored)
+        .filter(entry => normalizeMode(entry.mode || entry.difficulty) === mode);
+      scores.push(...legacyScores);
+    } catch {
+      // Legacy data should never break the current leaderboard.
+    }
+  }
+
+  return cleanScores(scores, mode);
 }
 
 async function writeScores(mode, scores) {

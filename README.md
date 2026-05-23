@@ -38,6 +38,8 @@ bsod:scores:nightmare
 
 Each key keeps the top 10 best scores for that mode, with only one entry per normalized player name.
 
+Older deployments that used the flat `dodge-bsod:scores` key are still read by the API. Matching legacy scores are folded into the mode-specific leaderboard display so existing scores are not lost.
+
 ## Deploy To Vercel
 
 1. Push this folder to a Git repository.
