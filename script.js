@@ -52,14 +52,14 @@
   let highScore = Number(localStorage.getItem("bsodHighScore") || 0);
   let playerName = sanitizeName(localStorage.getItem("bsodPlayerName") || "");
   let cachedScores = [];
-  let activeLeaderboardMode = localStorage.getItem("bsodLeaderboardMode") || "normal";
+  let activeLeaderboardMode = localStorage.getItem("bsodLeaderboardMode") || "all";
 
   const difficulties = {
     chill: { label: "Chill", spawn: 0.56, speed: 0.72, damage: 0.65, events: 1.55, maxSpeed: 230, warning: 1.45, power: 0.68, hitbox: 0.62, score: 0.85 },
     normal: { label: "Normal", spawn: 1, speed: 1, damage: 1, events: 1, maxSpeed: 310, warning: 1, power: 1, hitbox: 0.72, score: 1 },
     nightmare: { label: "Nightmare", spawn: 1.45, speed: 1.22, damage: 1.14, events: 0.68, maxSpeed: 390, warning: 0.72, power: 1.45, hitbox: 0.82, score: 1.35 }
   };
-  if (!difficulties[activeLeaderboardMode]) activeLeaderboardMode = "normal";
+  if (activeLeaderboardMode !== "all" && !difficulties[activeLeaderboardMode]) activeLeaderboardMode = "all";
 
   const messages = [
     "Windows is checking for a solution. It found none.",
@@ -1037,6 +1037,7 @@
 
   function normalizeMode(value) {
     const key = String(value || "").trim().toLocaleLowerCase("en-US");
+    if (key === "all") return "all";
     return difficulties[key] ? key : "normal";
   }
 
@@ -1083,7 +1084,15 @@
     localStorage.setItem("bsodLocalScoresByMode", JSON.stringify(store));
   }
 
+  function allLocalScores(store) {
+    return ["chill", "normal", "nightmare"]
+      .flatMap(mode => bestLocalScores(store[mode] || [], mode))
+      .sort((a, b) => b.score - a.score || b.survivalTime - a.survivalTime)
+      .slice(0, 10);
+  }
+
   function bestLocalScores(scores, mode) {
+    if (!difficulties[mode]) return [];
     const best = new Map();
     for (const raw of scores || []) {
       const key = playerKey(raw.playerKey || raw.name);
@@ -1093,7 +1102,7 @@
         playerKey: key,
         name: sanitizeName(raw.name),
         mode,
-        difficulty: difficulties[mode].label,
+        difficulty: difficulties[mode]?.label || "All",
         score: Math.floor(Number(raw.score) || 0),
         survivalTime: Math.floor(Number(raw.survivalTime) || 0),
         date: raw.date || new Date().toISOString()
@@ -1106,6 +1115,7 @@
 
   function upsertLocalScore(payload) {
     const mode = normalizeMode(payload.mode || payload.difficulty);
+    if (mode === "all") return { result: "ignored", scores: [] };
     const store = readLocalScores();
     const scores = bestLocalScores(store[mode] || [], mode);
     const key = playerKey(payload.name);
@@ -1150,7 +1160,9 @@
       cachedScores = Array.isArray(data.scores) ? data.scores : [];
     } catch {
       const store = readLocalScores();
-      cachedScores = bestLocalScores(store[activeLeaderboardMode] || [], activeLeaderboardMode);
+      cachedScores = activeLeaderboardMode === "all"
+        ? allLocalScores(store)
+        : bestLocalScores(store[activeLeaderboardMode] || [], activeLeaderboardMode);
     }
     renderLeaderboard(ui.leaderboard, cachedScores);
     renderLeaderboard(ui.gameOverLeaderboard, cachedScores);
