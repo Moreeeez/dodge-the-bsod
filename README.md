@@ -28,6 +28,16 @@ Create a Vercel KV database in your Vercel project, then connect it to the proje
 
 For local development without KV, scores use an in-memory fallback. This is only for testing and resets when the dev server restarts.
 
+Leaderboard scores are stored under namespaced keys:
+
+```text
+bsod:scores:chill
+bsod:scores:normal
+bsod:scores:nightmare
+```
+
+Each key keeps the top 10 best scores for that mode, with only one entry per normalized player name.
+
 ## Deploy To Vercel
 
 1. Push this folder to a Git repository.
@@ -39,7 +49,9 @@ The frontend calls `/api/scores`, so it works on Vercel without hardcoded hostna
 
 ## API
 
-- `GET /api/scores` returns the top 10 scores.
-- `POST /api/scores` accepts `{ name, score, survivalTime, difficulty }`.
+- `GET /api/scores?mode=chill` returns the top 10 Chill scores.
+- `GET /api/scores?mode=normal` returns the top 10 Normal scores.
+- `GET /api/scores?mode=nightmare` returns the top 10 Nightmare scores.
+- `POST /api/scores` accepts `{ name, score, survivalTime, mode }`.
 
-Scores are validated for missing fields, invalid names, invalid difficulties, negative values, and clearly unrealistic score/time ratios.
+Scores are validated for missing fields, invalid names, invalid modes, negative values, and clearly unrealistic score/time ratios. If a player submits another score for the same mode, the API updates their entry only when the new score is higher.

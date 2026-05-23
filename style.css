@@ -121,13 +121,16 @@ h1 {
 }
 
 .square-button,
-.primary-button {
+.primary-button,
+.secondary-button,
+.leaderboard-tab {
   border: 2px solid #061a44;
   color: #fff;
   background: linear-gradient(180deg, #5fa8ff, var(--xp-blue) 55%, var(--xp-blue-dark));
   font-weight: 950;
   cursor: pointer;
   box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.65), 0 4px 0 #061a44;
+  transition: transform 120ms ease, filter 120ms ease, box-shadow 120ms ease;
 }
 
 .square-button {
@@ -142,8 +145,33 @@ h1 {
   font-size: 1rem;
 }
 
+.secondary-button {
+  min-height: 38px;
+  margin-top: 10px;
+  padding: 8px 15px;
+  border-radius: 6px;
+  color: #061a44;
+  background: linear-gradient(180deg, #ffffff, #d8ecff);
+}
+
+.hud-card.wide {
+  min-width: 112px;
+}
+
+.square-button:hover,
+.primary-button:hover,
+.secondary-button:hover,
+.mini-button:hover,
+.leaderboard-tab:hover {
+  filter: brightness(1.08) saturate(1.08);
+  transform: translateY(-1px);
+}
+
 .square-button:active,
-.primary-button:active {
+.primary-button:active,
+.secondary-button:active,
+.mini-button:active,
+.leaderboard-tab:active {
   transform: translateY(2px);
   box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.65), 0 2px 0 #061a44;
 }
@@ -388,6 +416,12 @@ canvas {
   font-size: 0.82rem;
   font-weight: 950;
   cursor: pointer;
+  transition: transform 120ms ease, background 120ms ease, border-color 120ms ease;
+}
+
+.difficulty-picker label:hover {
+  transform: translateY(-1px);
+  border-color: #245edb;
 }
 
 .difficulty-picker input {
@@ -422,6 +456,33 @@ canvas {
   justify-self: end;
 }
 
+.how-to-play {
+  margin: 12px 0 16px;
+  border: 2px solid #061a44;
+  border-radius: 6px;
+  background: #fff;
+  text-align: left;
+}
+
+.how-to-play summary {
+  padding: 9px 11px;
+  color: #061a44;
+  font-weight: 950;
+  cursor: pointer;
+}
+
+.how-to-play ul {
+  margin: 0;
+  padding: 0 14px 12px 28px;
+  color: #344054;
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.how-to-play li + li {
+  margin-top: 5px;
+}
+
 .leaderboard-panel {
   margin-top: 16px;
   padding: 10px;
@@ -448,6 +509,28 @@ canvas {
   background: linear-gradient(180deg, #5fa8ff, var(--xp-blue));
   font-weight: 900;
   cursor: pointer;
+}
+
+.leaderboard-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.leaderboard-tab {
+  min-height: 30px;
+  padding: 5px 6px;
+  border-radius: 4px;
+  color: #061a44;
+  background: linear-gradient(180deg, #ffffff, #edf6ff);
+  box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.65), 0 3px 0 #061a44;
+  font-size: 0.78rem;
+}
+
+.leaderboard-tab.active {
+  color: #fff;
+  background: linear-gradient(180deg, #5fa8ff, var(--xp-blue));
 }
 
 .leaderboard-list {
@@ -536,7 +619,8 @@ canvas {
 
   .difficulty-picker,
   .help-grid,
-  .results {
+  .results,
+  .leaderboard-tabs {
     grid-template-columns: 1fr;
     text-align: center;
   }

@@ -24,6 +24,8 @@
         <div class="hud-card"><span>Combo</span><strong id="comboValue">x1</strong></div>
         <div class="hud-card"><span>Shield</span><strong id="shieldValue">Off</strong></div>
         <div class="hud-card"><span>Power</span><strong id="powerValue">None</strong></div>
+        <div class="hud-card wide"><span>Active</span><strong id="activePowerValue">None</strong></div>
+        <button id="muteButton" class="square-button" type="button" aria-label="Mute sounds" title="Mute sounds">SFX</button>
         <button id="pauseButton" class="square-button" type="button" aria-label="Pause game" title="Pause">II</button>
       </section>
     </header>
@@ -63,11 +65,26 @@
               <span>Powerups</span><strong>Collect green utilities</strong>
               <span>Goal</span><strong>Survive the operating system</strong>
             </div>
+            <details class="how-to-play">
+              <summary>Powerups / How to Play</summary>
+              <ul>
+                <li><b>Task Manager</b> clears enemies from the screen.</li>
+                <li><b>Antivirus Shield</b> blocks damage for a short time.</li>
+                <li><b>Reformat Bomb</b> wipes most dangerous objects.</li>
+                <li><b>SSD Speed Boost</b> gives temporary faster movement.</li>
+                <li><b>RAM Upgrade</b> slows the system down briefly.</li>
+              </ul>
+            </details>
             <button id="startButton" class="primary-button" type="button">Start Program</button>
             <section class="leaderboard-panel" aria-label="Leaderboard">
               <div class="leaderboard-heading">
-                <strong>Top Scores</strong>
+                <strong>Best Scores</strong>
                 <button id="refreshScoresButton" class="mini-button" type="button">Refresh</button>
+              </div>
+              <div class="leaderboard-tabs" role="tablist" aria-label="Leaderboard difficulty">
+                <button class="leaderboard-tab active" type="button" data-mode="chill">Chill</button>
+                <button class="leaderboard-tab" type="button" data-mode="normal">Normal</button>
+                <button class="leaderboard-tab" type="button" data-mode="nightmare">Nightmare</button>
               </div>
               <ol id="leaderboardList" class="leaderboard-list">
                 <li>Loading leaderboard...</li>
@@ -87,6 +104,7 @@
             <h2>Paused</h2>
             <p>CPU usage: emotionally high.</p>
             <button id="resumeButton" class="primary-button" type="button">Resume</button>
+            <button id="pauseBackButton" class="secondary-button" type="button">Back to Start</button>
           </div>
         </div>
       </div>
@@ -115,11 +133,17 @@
               <div class="leaderboard-heading">
                 <strong>Leaderboard</strong>
               </div>
+              <div class="leaderboard-tabs" role="tablist" aria-label="Game over leaderboard difficulty">
+                <button class="leaderboard-tab active" type="button" data-mode="chill">Chill</button>
+                <button class="leaderboard-tab" type="button" data-mode="normal">Normal</button>
+                <button class="leaderboard-tab" type="button" data-mode="nightmare">Nightmare</button>
+              </div>
               <ol id="gameOverLeaderboardList" class="leaderboard-list">
                 <li>Loading leaderboard...</li>
               </ol>
             </section>
             <button id="restartButton" class="primary-button" type="button">Restart Windows</button>
+            <button id="gameOverBackButton" class="secondary-button" type="button">Back to Start</button>
           </div>
         </div>
       </div>

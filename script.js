@@ -12,6 +12,7 @@
     combo: document.getElementById("comboValue"),
     shield: document.getElementById("shieldValue"),
     power: document.getElementById("powerValue"),
+    activePower: document.getElementById("activePowerValue"),
     status: document.getElementById("statusText"),
     warning: document.getElementById("warningFlash"),
     event: document.getElementById("eventBadge"),
@@ -33,25 +34,32 @@
     leaderboard: document.getElementById("leaderboardList"),
     nameError: document.getElementById("nameError"),
     nameInput: document.getElementById("playerNameInput"),
+    muteButton: document.getElementById("muteButton"),
     pauseButton: document.getElementById("pauseButton")
   };
   ui.refreshScores = document.getElementById("refreshScoresButton");
   ui.submitStatus = document.getElementById("submitStatus");
+  ui.pauseBack = document.getElementById("pauseBackButton");
+  ui.gameOverBack = document.getElementById("gameOverBackButton");
+  ui.leaderboardTabs = [...document.querySelectorAll(".leaderboard-tab")];
 
   const W = canvas.width;
   const H = canvas.height;
   const keys = new Set();
   let lastTime = 0;
   let audioCtx;
+  let muted = localStorage.getItem("bsodMuted") === "true";
   let highScore = Number(localStorage.getItem("bsodHighScore") || 0);
   let playerName = sanitizeName(localStorage.getItem("bsodPlayerName") || "");
   let cachedScores = [];
+  let activeLeaderboardMode = localStorage.getItem("bsodLeaderboardMode") || "normal";
 
   const difficulties = {
-    chill: { label: "Chill", spawn: 0.72, speed: 0.82, damage: 0.72, events: 1.35, maxSpeed: 260 },
-    normal: { label: "Normal", spawn: 1, speed: 0.96, damage: 0.95, events: 1, maxSpeed: 310 },
-    nightmare: { label: "Nightmare", spawn: 1.25, speed: 1.08, damage: 1.08, events: 0.82, maxSpeed: 355 }
+    chill: { label: "Chill", spawn: 0.56, speed: 0.72, damage: 0.65, events: 1.55, maxSpeed: 230, warning: 1.45, power: 0.68, hitbox: 0.62, score: 0.85 },
+    normal: { label: "Normal", spawn: 1, speed: 1, damage: 1, events: 1, maxSpeed: 310, warning: 1, power: 1, hitbox: 0.72, score: 1 },
+    nightmare: { label: "Nightmare", spawn: 1.45, speed: 1.22, damage: 1.14, events: 0.68, maxSpeed: 390, warning: 0.72, power: 1.45, hitbox: 0.82, score: 1.35 }
   };
+  if (!difficulties[activeLeaderboardMode]) activeLeaderboardMode = "normal";
 
   const messages = [
     "Windows is checking for a solution. It found none.",
@@ -167,6 +175,7 @@
     localStorage.setItem("bsodPlayerName", playerName);
     ui.nameError.hidden = true;
     state.selectedDifficulty = document.querySelector("input[name='difficulty']:checked")?.value || "normal";
+    setLeaderboardMode(state.selectedDifficulty, false);
     const profile = difficulties[state.selectedDifficulty];
     Object.assign(state, {
       mode: "playing",
@@ -183,7 +192,7 @@
       powerupsUsed: 0,
       bossesDefeated: 0,
       spawnTimer: 0.35,
-      powerTimer: 7,
+      powerTimer: rand(5.5, 8.5) * profile.power,
       messageTimer: 0,
       eventTimer: 6 * profile.events,
       event: null,
@@ -231,7 +240,7 @@
     const profile = difficulties[state.selectedDifficulty];
     state.elapsed += dt;
     state.difficulty = 1 + Math.min(2.6, state.elapsed / 60);
-    state.score += dt * 12 * state.combo * (state.boss ? 1.35 : 1);
+    state.score += dt * 12 * state.combo * profile.score * (state.boss ? 1.35 : 1);
     state.messageTimer -= dt;
     player.invincible = Math.max(0, player.invincible - dt);
     player.shield = Math.max(0, player.shield - dt);
@@ -304,7 +313,8 @@
     state[timer] = state.eventLeft;
     ui.event.textContent = badge;
     setStatus(text);
-    if (name === "update" || name === "storm" || name === "infection") state.warningLeft = 1.6;
+    const profile = difficulties[state.selectedDifficulty];
+    if (name === "update" || name === "storm" || name === "infection") state.warningLeft = 1.6 * profile.warning;
     if (name === "update") setTimeout(() => state.mode === "playing" && spawnBsodWall(), 850);
     beep(220, 0.08, "sawtooth", 0.05);
   }
@@ -344,7 +354,7 @@
     boss.y += (48 + Math.sin(boss.t * 2.1) * 14 - boss.y) * (1 - Math.pow(0.06, dt));
     state.bossShotTimer -= dt;
     if (state.bossShotTimer <= 0) {
-      state.warningLeft = 0.9;
+      state.warningLeft = 0.9 * difficulties[state.selectedDifficulty].warning;
       const pattern = Math.floor(boss.t) % 3;
       if (pattern === 0) spawnBossRain();
       if (pattern === 1) spawnBossSweep();
@@ -369,7 +379,7 @@
     state.bossShotTimer = 1.4;
     ui.bossBar.hidden = false;
     ui.event.textContent = "BOSS FIGHT";
-    state.warningLeft = 2;
+    state.warningLeft = 2 * difficulties[state.selectedDifficulty].warning;
     setStatus("Critical System Failure boss loaded. This one has a manager.");
     beep(110, 0.35, "sawtooth", 0.07);
   }
@@ -387,7 +397,7 @@
     }
     if (state.powerTimer <= 0) {
       spawnPowerup();
-      state.powerTimer = rand(8, 14);
+      state.powerTimer = rand(8, 14) * profile.power;
     }
   }
 
@@ -404,7 +414,7 @@
       hit: false,
       counted: false
     });
-    if ((base.type === "bsod" || base.type === "watermark") && Math.random() < 0.35) state.warningLeft = 1.1;
+    if ((base.type === "bsod" || base.type === "watermark") && Math.random() < 0.35) state.warningLeft = 1.1 * profile.warning;
   }
 
   function weightedEnemy() {
@@ -423,9 +433,10 @@
     for (let i = 0; i < 6; i++) {
       if (i === gap) continue;
       const base = enemyTypes.find(enemy => enemy.type === type);
-      state.enemies.push({ ...base, x: 48 + i * 132, y: -120 - i * 16, vx: 0, vy: Math.min(difficulties[state.selectedDifficulty].maxSpeed, base.speed * state.difficulty), wobble: rand(0, 9), hit: false, counted: false });
+      const profile = difficulties[state.selectedDifficulty];
+      state.enemies.push({ ...base, x: 48 + i * 132, y: -120 - i * 16, vx: 0, vy: Math.min(profile.maxSpeed, base.speed * state.difficulty * profile.speed), wobble: rand(0, 9), hit: false, counted: false });
     }
-    state.warningLeft = 1.35;
+    state.warningLeft = 1.35 * difficulties[state.selectedDifficulty].warning;
   }
 
   function spawnBsodWall() {
@@ -433,7 +444,8 @@
     for (let x = 20; x < W - 120; x += 145) {
       if (x > gap && x < gap + 150) continue;
       const base = enemyTypes[0];
-      state.enemies.push({ ...base, x, y: -150, vx: 0, vy: Math.min(difficulties[state.selectedDifficulty].maxSpeed, 170 * state.difficulty), wobble: rand(0, 10), hit: false, counted: false });
+      const profile = difficulties[state.selectedDifficulty];
+      state.enemies.push({ ...base, x, y: -150, vx: 0, vy: Math.min(profile.maxSpeed, 170 * state.difficulty * profile.speed), wobble: rand(0, 10), hit: false, counted: false });
     }
   }
 
@@ -444,7 +456,8 @@
   function spawnBossSweep() {
     for (let i = 0; i < 8; i++) {
       const base = enemyTypes.find(enemy => enemy.type === "file");
-      state.enemies.push({ ...base, x: i * 112, y: -70 - i * 28, vx: i % 2 ? 60 : -60, vy: Math.min(difficulties[state.selectedDifficulty].maxSpeed, 205 * state.difficulty), wobble: rand(0, 8), hit: false, counted: false });
+      const profile = difficulties[state.selectedDifficulty];
+      state.enemies.push({ ...base, x: i * 112, y: -70 - i * 28, vx: i % 2 ? 60 : -60, vy: Math.min(profile.maxSpeed, 205 * state.difficulty * profile.speed), wobble: rand(0, 8), hit: false, counted: false });
     }
   }
 
@@ -502,8 +515,9 @@
 
     for (const enemy of state.enemies) {
       if (enemy.hit || player.invincible > 0) continue;
-      const rect = shrinkRect(enemy, enemy.type === "malware" ? 0.62 : 0.74, 0.68);
-      if (!circleRect(player.x, player.y, player.r * 0.68, rect)) continue;
+      const rectScale = enemy.type === "malware" ? profile.hitbox * 0.86 : profile.hitbox;
+      const rect = shrinkRect(enemy, rectScale, Math.max(0.56, rectScale * 0.9));
+      if (!circleRect(player.x, player.y, player.r * Math.max(0.62, profile.hitbox * 0.9), rect)) continue;
       enemy.hit = true;
       if (player.shield > 0) {
         player.shield = Math.max(0, player.shield - 2.6);
@@ -847,8 +861,18 @@
     ui.health.textContent = Math.max(0, Math.ceil(state.health));
     ui.combo.textContent = `x${state.combo}`;
     ui.shield.textContent = player.shield > 0 ? `${Math.ceil(player.shield)}s` : "Off";
+    ui.activePower.textContent = activePowerText();
     if (player.boost <= 0 && state.slowmoLeft <= 0 && player.shield <= 0) ui.power.textContent = "None";
     if (state.boss) ui.bossHealth.style.width = `${Math.max(0, state.boss.hp / state.boss.maxHp * 100)}%`;
+  }
+
+  function activePowerText() {
+    const active = [];
+    if (player.shield > 0) active.push(`Shield ${Math.ceil(player.shield)}s`);
+    if (player.boost > 0) active.push(`SSD ${Math.ceil(player.boost)}s`);
+    if (state.slowmoLeft > 0) active.push(`RAM ${Math.ceil(state.slowmoLeft)}s`);
+    if (player.invincible > 0) active.push(`Safe ${Math.ceil(player.invincible)}s`);
+    return active.length ? active.join(" | ") : "None";
   }
 
   function endGame() {
@@ -874,7 +898,10 @@
   }
 
   function togglePause(force) {
-    if (state.mode !== "playing" && state.mode !== "paused") return;
+    if (state.mode !== "playing" && state.mode !== "paused") {
+      setStatus("Start a program before pausing it. Classic Windows logic.");
+      return;
+    }
     if (force === "playing" || state.mode === "paused") {
       state.mode = "countdown";
       state.countdown = 3;
@@ -885,6 +912,26 @@
     state.mode = "paused";
     ui.pause.hidden = false;
     ui.pauseButton.textContent = ">";
+  }
+
+  function backToStart() {
+    state.mode = "start";
+    state.event = null;
+    state.boss = null;
+    state.enemies = [];
+    state.powerups = [];
+    state.particles = [];
+    state.warningLeft = 0;
+    keys.clear();
+    ui.start.hidden = false;
+    ui.pause.hidden = true;
+    ui.gameOver.hidden = true;
+    ui.warning.hidden = true;
+    ui.bossBar.hidden = true;
+    ui.pauseButton.textContent = "II";
+    frame.classList.remove("glitch");
+    setStatus("Back at the desktop. Nothing bad is happening yet.");
+    loadLeaderboard();
   }
 
   function setStatus(text) {
@@ -906,6 +953,7 @@
   }
 
   function beep(freq, duration, type, volume) {
+    if (muted) return;
     try {
       audioCtx ||= new (window.AudioContext || window.webkitAudioContext)();
       const osc = audioCtx.createOscillator();
@@ -921,6 +969,20 @@
     } catch {
       // Browsers can block audio until a user gesture; gameplay still works.
     }
+  }
+
+  function updateMuteButton() {
+    ui.muteButton.textContent = muted ? "MUTE" : "SFX";
+    ui.muteButton.title = muted ? "Unmute sounds" : "Mute sounds";
+    ui.muteButton.setAttribute("aria-label", ui.muteButton.title);
+  }
+
+  function toggleMute() {
+    muted = !muted;
+    localStorage.setItem("bsodMuted", String(muted));
+    updateMuteButton();
+    if (!muted) beep(640, 0.06, "square", 0.035);
+    setStatus(muted ? "Sound effects muted." : "Sound effects online.");
   }
 
   function loop(now) {
@@ -969,6 +1031,15 @@
       .slice(0, 16);
   }
 
+  function playerKey(value) {
+    return sanitizeName(value).toLocaleLowerCase("en-US");
+  }
+
+  function normalizeMode(value) {
+    const key = String(value || "").trim().toLocaleLowerCase("en-US");
+    return difficulties[key] ? key : "normal";
+  }
+
   function escapeHtml(value) {
     return String(value).replace(/[&<>"']/g, char => ({
       "&": "&amp;",
@@ -993,30 +1064,93 @@
     }
     target.innerHTML = scores.slice(0, 10).map(entry => (
       `<li><b>${escapeHtml(entry.name)}</b> - ${Number(entry.score).toLocaleString()} pts, ` +
-      `${Number(entry.survivalTime || 0)}s, ${escapeHtml(entry.difficulty)}, ${formatDate(entry.date)}</li>`
+      `${Number(entry.survivalTime || 0)}s, ${escapeHtml(entry.difficulty || difficulties[entry.mode]?.label || "")}, ${formatDate(entry.date)}</li>`
     )).join("");
   }
 
   function readLocalScores() {
     try {
-      return JSON.parse(localStorage.getItem("bsodLocalScores") || "[]");
+      const store = JSON.parse(localStorage.getItem("bsodLocalScoresByMode") || "null");
+      if (store && typeof store === "object") return store;
+      const legacy = JSON.parse(localStorage.getItem("bsodLocalScores") || "[]");
+      return { chill: [], normal: legacy, nightmare: [] };
     } catch {
-      return [];
+      return { chill: [], normal: [], nightmare: [] };
     }
   }
 
-  function writeLocalScores(scores) {
-    localStorage.setItem("bsodLocalScores", JSON.stringify(scores.slice(0, 10)));
+  function writeLocalScores(store) {
+    localStorage.setItem("bsodLocalScoresByMode", JSON.stringify(store));
   }
 
-  async function loadLeaderboard() {
+  function bestLocalScores(scores, mode) {
+    const best = new Map();
+    for (const raw of scores || []) {
+      const key = playerKey(raw.playerKey || raw.name);
+      if (!key) continue;
+      const entry = {
+        ...raw,
+        playerKey: key,
+        name: sanitizeName(raw.name),
+        mode,
+        difficulty: difficulties[mode].label,
+        score: Math.floor(Number(raw.score) || 0),
+        survivalTime: Math.floor(Number(raw.survivalTime) || 0),
+        date: raw.date || new Date().toISOString()
+      };
+      const current = best.get(key);
+      if (!current || entry.score > current.score) best.set(key, entry);
+    }
+    return [...best.values()].sort((a, b) => b.score - a.score || b.survivalTime - a.survivalTime).slice(0, 10);
+  }
+
+  function upsertLocalScore(payload) {
+    const mode = normalizeMode(payload.mode || payload.difficulty);
+    const store = readLocalScores();
+    const scores = bestLocalScores(store[mode] || [], mode);
+    const key = playerKey(payload.name);
+    const existing = scores.find(entry => entry.playerKey === key);
+    if (existing && Number(payload.score) <= existing.score) {
+      store[mode] = scores;
+      writeLocalScores(store);
+      return { result: "ignored", scores };
+    }
+    const entry = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      playerKey: key,
+      name: sanitizeName(payload.name),
+      score: Math.floor(Number(payload.score) || 0),
+      survivalTime: Math.floor(Number(payload.survivalTime) || 0),
+      mode,
+      difficulty: difficulties[mode].label,
+      date: new Date().toISOString()
+    };
+    store[mode] = bestLocalScores(existing ? scores.map(item => item.playerKey === key ? entry : item) : [...scores, entry], mode);
+    writeLocalScores(store);
+    return { result: existing ? "updated" : "saved", scores: store[mode] };
+  }
+
+  function setLeaderboardMode(mode, shouldLoad = true) {
+    activeLeaderboardMode = normalizeMode(mode);
+    localStorage.setItem("bsodLeaderboardMode", activeLeaderboardMode);
+    ui.leaderboardTabs.forEach(tab => {
+      const active = tab.dataset.mode === activeLeaderboardMode;
+      tab.classList.toggle("active", active);
+      tab.setAttribute("aria-selected", String(active));
+    });
+    if (shouldLoad) loadLeaderboard();
+  }
+
+  async function loadLeaderboard(mode = activeLeaderboardMode) {
+    activeLeaderboardMode = normalizeMode(mode);
     try {
-      const response = await fetch("/api/scores", { cache: "no-store" });
+      const response = await fetch(`/api/scores?mode=${encodeURIComponent(activeLeaderboardMode)}`, { cache: "no-store" });
       if (!response.ok) throw new Error("Leaderboard unavailable");
       const data = await response.json();
       cachedScores = Array.isArray(data.scores) ? data.scores : [];
     } catch {
-      cachedScores = readLocalScores();
+      const store = readLocalScores();
+      cachedScores = bestLocalScores(store[activeLeaderboardMode] || [], activeLeaderboardMode);
     }
     renderLeaderboard(ui.leaderboard, cachedScores);
     renderLeaderboard(ui.gameOverLeaderboard, cachedScores);
@@ -1027,6 +1161,7 @@
       name: playerName,
       score,
       survivalTime: Math.floor(state.elapsed),
+      mode: state.selectedDifficulty,
       difficulty: difficulties[state.selectedDifficulty].label
     };
 
@@ -1039,14 +1174,20 @@
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Score rejected");
       cachedScores = data.scores || [];
-      ui.submitStatus.textContent = "Score submitted to leaderboard.";
+      const statusText = {
+        saved: "New leaderboard score saved.",
+        updated: "New personal best updated.",
+        ignored: "Score was lower than your best for this mode."
+      };
+      ui.submitStatus.textContent = statusText[data.result] || "Score checked.";
     } catch {
-      cachedScores = [...readLocalScores(), { ...payload, date: new Date().toISOString() }]
-        .sort((a, b) => b.score - a.score)
-        .slice(0, 10);
-      writeLocalScores(cachedScores);
-      ui.submitStatus.textContent = "Saved locally. Online leaderboard unavailable.";
+      const result = upsertLocalScore(payload);
+      cachedScores = result.scores;
+      ui.submitStatus.textContent = result.result === "ignored"
+        ? "Saved locally: lower than your best for this mode."
+        : "Saved locally. Online leaderboard unavailable.";
     }
+    setLeaderboardMode(state.selectedDifficulty, false);
     renderLeaderboard(ui.leaderboard, cachedScores);
     renderLeaderboard(ui.gameOverLeaderboard, cachedScores);
   }
@@ -1063,7 +1204,21 @@
   document.getElementById("restartButton").addEventListener("click", resetGame);
   document.getElementById("resumeButton").addEventListener("click", () => togglePause("playing"));
   ui.pauseButton.addEventListener("click", () => togglePause());
-  ui.refreshScores.addEventListener("click", loadLeaderboard);
+  ui.muteButton.addEventListener("click", toggleMute);
+  ui.pauseBack.addEventListener("click", backToStart);
+  ui.gameOverBack.addEventListener("click", backToStart);
+  ui.refreshScores.addEventListener("click", () => loadLeaderboard());
+  ui.leaderboardTabs.forEach(tab => {
+    tab.addEventListener("click", () => {
+      const mode = normalizeMode(tab.dataset.mode);
+      const radio = document.querySelector(`input[name='difficulty'][value='${mode}']`);
+      if (radio) radio.checked = true;
+      setLeaderboardMode(mode);
+    });
+  });
+  document.querySelectorAll("input[name='difficulty']").forEach(input => {
+    input.addEventListener("change", () => setLeaderboardMode(input.value));
+  });
   ui.nameInput.value = playerName;
   ui.nameInput.addEventListener("input", () => {
     ui.nameInput.value = sanitizeName(ui.nameInput.value);
@@ -1071,6 +1226,8 @@
   });
 
   ui.high.textContent = highScore.toLocaleString();
+  updateMuteButton();
+  setLeaderboardMode(activeLeaderboardMode, false);
   updateUi();
   loadLeaderboard();
   requestAnimationFrame(time => {
