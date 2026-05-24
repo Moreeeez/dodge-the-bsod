@@ -934,6 +934,36 @@
     loadLeaderboard();
   }
 
+  function handleTitleButton(event) {
+    const button = event.currentTarget;
+    const panel = button.closest(".window-panel");
+    const overlay = button.closest(".overlay");
+    const action = button.dataset.titleAction;
+    if (!panel || !action) return;
+
+    if (action === "minimize") {
+      panel.classList.toggle("minimized");
+      setStatus(panel.classList.contains("minimized") ? "Window minimized. Very professional." : "Window restored.");
+      return;
+    }
+
+    if (action === "maximize") {
+      panel.classList.remove("minimized");
+      panel.classList.toggle("expanded");
+      setStatus(panel.classList.contains("expanded") ? "Window resized. Pixels have more legroom." : "Window size restored.");
+      return;
+    }
+
+    if (overlay === ui.pause) {
+      togglePause("playing");
+    } else if (overlay === ui.gameOver) {
+      backToStart();
+    } else {
+      shake(0.35);
+      setStatus("Setup window is required. Windows refuses to close itself.");
+    }
+  }
+
   function setStatus(text) {
     ui.status.textContent = text;
     state.messageTimer = 3.8;
@@ -1216,6 +1246,9 @@
       if (radio) radio.checked = true;
       setLeaderboardMode(mode);
     });
+  });
+  document.querySelectorAll(".title-button").forEach(button => {
+    button.addEventListener("click", handleTitleButton);
   });
   document.querySelectorAll("input[name='difficulty']").forEach(input => {
     input.addEventListener("change", () => setLeaderboardMode(input.value));
