@@ -102,6 +102,7 @@
   const powerTypes = [
     { type: "taskmgr", label: "Task Manager", color: "#32d583" },
     { type: "shield", label: "Antivirus Shield", color: "#7dd3fc" },
+    { type: "heal", label: "System Restore", color: "#fef08a" },
     { type: "bomb", label: "Reformat Bomb", color: "#fdb022" },
     { type: "ssd", label: "SSD Boost", color: "#ffffff" },
     { type: "ram", label: "RAM Slow-mo", color: "#c084fc" }
@@ -251,8 +252,9 @@
     tickEvents(dt, profile);
     const lagScale = state.lagLeft > 0 ? 0.38 : 1;
     const slowScale = state.slowmoLeft > 0 ? 0.52 : 1;
+    const playerDt = dt * lagScale;
     const gameDt = dt * lagScale * slowScale;
-    updatePlayer(gameDt);
+    updatePlayer(playerDt);
     updateBoss(dt);
     updateSpawning(gameDt, profile);
     updatePowerups(gameDt);
@@ -543,14 +545,16 @@
     const labels = {
       taskmgr: "Task Manager cleared visible nonsense.",
       shield: "Antivirus shield online. Very premium.",
+      heal: "System Restore healed the cursor. Somehow this worked.",
       bomb: "Reformat bomb deployed. Files are nervous.",
       ssd: "SSD boost. Cursor has discovered caffeine.",
-      ram: "RAM upgrade active. Time got more memory."
+      ram: "RAM upgrade active. Obstacles are buffering, not you."
     };
     setStatus(labels[type]);
     ui.power.textContent = powerTypes.find(power => power.type === type)?.label || "Utility";
     if (type === "taskmgr") clearEnemies(0.65);
     if (type === "shield") player.shield = 8;
+    if (type === "heal") state.health = Math.min(100, state.health + 30);
     if (type === "bomb") clearEnemies(1);
     if (type === "ssd") player.boost = 6;
     if (type === "ram") state.slowmoLeft = 6;
@@ -762,7 +766,7 @@
   }
 
   function powerGlyph(type) {
-    return { taskmgr: "TM", shield: "AV", bomb: "FMT", ssd: "SSD", ram: "RAM" }[type] || "?";
+    return { taskmgr: "TM", shield: "AV", heal: "HP", bomb: "FMT", ssd: "SSD", ram: "RAM" }[type] || "?";
   }
 
   function drawWindow(x, y, w, h, title, body, fill, bsod = false) {
